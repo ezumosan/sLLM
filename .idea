@@ -1,3 +1,48 @@
 ### idea note
 #使用するモデル
 Microsoftのpiモデルの軽量のやつがいい気がする。高品質なデータセットで学習されているため、性能が良いと期待できる。また、どのようにディレクトリを配置すれば良いかは難儀である気がする。今のところは適当に構成を組んでいるからさ。
+あと、今んところAIに組んでもらった構成で作成しようと思う。
+
+sLLM/
+├── .gitignore
+├── README.md
+├── requirements.txt              # 依存ライブラリ一覧
+│
+├── data/                         # 実験用データセット
+│   ├── questions.json            # 評価用テストセット（歴史・事実・引っかけ問題等）
+│   └── references/               # RAGやファクトチェック検証用の参照資料
+│
+├── src/                          # コアロジック（モジュール）
+│   ├── __init__.py
+│   ├── orchestrator/             # オーケストレーション制御
+│   │   ├── __init__.py
+│   │   ├── router.py             # 司令塔AI（タスク分類・タグ出力）
+│   │   ├── critic.py             # 自己検証役（Critic & Refine）
+│   │   └── pipeline.py           # 直列分解・アンサンブル実行ロジック
+│   │
+│   ├── models/                   # モデル呼び出しの抽象化
+│   │   ├── __init__.py
+│   │   ├── ollama_runner.py      # Ollama推論ラッパー
+│   │   └── hf_runner.py          # Hugging Face / PyTorch推論ラッパー
+│   │
+│   ├── rl/                       # 強化学習（GRPO）関連
+│   │   ├── train_grpo.py         # 学習実行スクリプト
+│   │   └── rewards.py            # 報酬関数の定義（フォーマット・正誤判定）
+│   │
+│   └── evaluate/                 # 評価・計測ツール
+│       ├── __init__.py
+│       ├── metrics.py            # ハルシネーション率・正答率の計算ロジック
+│       └── judge.py              # 出力結果のファクトチェック判定器
+│
+├── scripts/                      # 実験実行エントリーポイント
+│   ├── run_experiment.py         # 各手法（単体・検証ループ等）を一括実行するスクリプト
+│   └── generate_charts.py        # ログから発表用グラフ（PNG）を描画するスクリプト
+│
+├── results/                      # 実験結果の出力先（※容量が大きいためGit除外推奨）
+│   ├── logs/                     # 各試行の入出力ログ（CSV / JSONL）
+│   └── figures/                  # 論文・ポスター用グラフ画像
+│
+└── notebooks/                    # 試作・プロトタイプ検証用（Jupyter Notebook）
+    └── exploratory.ipynb
+
+こんな感じの構成にして構築していく。
