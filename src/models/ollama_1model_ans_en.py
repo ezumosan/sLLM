@@ -2,6 +2,8 @@ import ollama
 import time
 import os
 import csv
+import re
+from datetime import datetime
 #モデルのデフォルトパラメータを操作
 #正式のモデル名はOllamaのドキュメントを参照すること。
 use_model = "phi3.5"  
@@ -29,24 +31,35 @@ def run_ollama(
             "temperature": temperature,
             "repeat_penalty": repeat_penalty,
             "num_predict": num_predict,
-            "seed": seed
+            "seed": seed,
+            "stop": ["\n\n", "\n", "User:"]
         }
     )
     return response["message"]["content"]
 
-#logの保存を定義
-def save_log(
+# <ans>タグから回答を抽出する関数
+def extract_answer(raw_output):
+    match = re.search(r"<ans>(.*?)</ans>", raw_output, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    # stopで</ans>が切られた場合のフォールバック
+    match_open = re.search(r"<ans>(.*)", raw_output, re.DOTALL)
+    if match_open:
+        return match_open.group(1).strip()
+    return raw_output.strip()
+
+# 評価ログの保存を定義
+def save_eval_log(
+    timestamp,
     model,
     input_question,
-    temperature,
-    repeat_penalty,
-    num_predict,
+    extracted_answer,
+    raw_output,
     seed,
-    ans1,
-    ans2,
     time_taken,
 ):
-  filepath = "../../results/logs/2sLLM_log.csv"
+  filepath = os.path.join(os.path.dirname(__file__), "..", "..", "results" , "logs", "1model_ans_accuracy" , "1model_ans_en_log.csv")
+  filepath = os.path.normpath(filepath)
   os.makedirs(os.path.dirname(filepath), exist_ok=True)
   file_exists = os.path.isfile(filepath)
 
@@ -54,26 +67,22 @@ def save_log(
     writer = csv.writer(file)
     if not file_exists:
       writer.writerow([
+          "Timestamp",
           "Model",
           "Input Question",
-          "Temperature",
-          "Repeat Penalty",
-          "Num Predict",
+          "Extracted Answer",
+          "Raw Output",
           "Seed",
-          "Answer from Ollama",
-          "Feedback from Ollama",
           "Time Taken (seconds)",
       ])
     writer.writerow([
+        timestamp,
         model,
         input_question,
-        temperature,
-        repeat_penalty,
-        num_predict,
+        extracted_answer,
+        raw_output,
         seed,
-        ans1,
-        ans2,
-        time_taken,
+        f"{time_taken:.2f}",
     ])
     print(f"Log saved to {filepath}")
 
@@ -84,45 +93,34 @@ repeat_num = int(input("How many times do you want to repeat the process? "))
 
 for i in range(repeat_num):
     print(f"Iteration {i + 1}/{repeat_num}")
-    
+    start_time = time.perf_counter()
 
     user_query = run_ollama(
         system_prompt="""You are a precise question-answering assistant.
-Answer the user's question directly and concisely in Japanese.
+Answer the user's question directly and concisely.
 
 Rules:
-1. Extract ONLY the core answer (entity, person's name, year, or term) and enclose it inside <ans> and </ans> tags.
+1. Extract ONLY the core answer (entity, person's name, year, or term) in English and enclose it inside <ans> and </ans> tags.
 2. Do NOT output full sentences, preambles, or explanations. Only the tagged entity.
-3. If you don't know the answer, respond with <ans>I don't know</ans>. This must be in english.
+3. If you don't know the answer, respond nothing.
 
 Example:
 User: Who was the first president of the United States?
 Assistant: <ans>George Washington</ans>
 User: Where is the Eiffel Tower located?
 Assistant: <ans>Paris, France</ans>
-User: What is the capital of Japan?
-Assistant: <ans>I don't know</ans>
 """,
         user_prompt=user_question
     )
-    print("Answer from Ollama:", user_query)
-    print("------------------------------")
-    start_time = time.perf_counter()
-    critic_prompt = (
-        f"質問: {user_question}\n回答: {user_query}\n上記の内容を検証してください。"
-    )
-    model_feedback = run_ollama(
-        system_prompt=(
-            "You are a strict, objective fact-checker. Examine the provided answer against the question and identify any factual errors.The answer should be in 512 tokens. If it exceeds 512 tokens, it won't be available for the user."
-        ),
-        user_prompt=critic_prompt,
-    )
-    print("Feedback from Ollama:", model_feedback)
-
-    print("------------------------------")
 
     end_time = time.perf_counter()
-    print("Time taken: {:.2f} seconds".format(end_time - start_time))
+    time_taken = end_time - start_time
+    extracted = extract_answer(user_query)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    print(f"Extracted Answer: {extracted}")
+    print(f"Raw Output: {user_query}")
+    print(f"Time taken: {time_taken:.2f} seconds")
     print("------------------------------")
-    save_log(use_model, user_question, temperature_model, repeat_penalty_model, num_predict_model, seed_model, user_query, model_feedback, end_time - start_time)
+
+    save_eval_log(timestamp, use_model, user_question, extracted, user_query, seed_model, time_taken)
