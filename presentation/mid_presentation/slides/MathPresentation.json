@@ -1,0 +1,51 @@
+{
+  "slides": [
+    {
+      "loop": false,
+      "auto_next": false,
+      "playback_rate": 1.0,
+      "reversed_playback_rate": 1.0,
+      "notes": "",
+      "dedent_notes": true,
+      "skip_animations": false,
+      "src": null,
+      "type": "video",
+      "direction": "horizontal",
+      "file": "slides/files/MathPresentation/eab6684086dd108ba7a83da29019243d0293ba6eba263691e76f45838edece33.mp4",
+      "rev_file": "slides/files/MathPresentation/eab6684086dd108ba7a83da29019243d0293ba6eba263691e76f45838edece33_reversed.mp4"
+    },
+    {
+      "loop": false,
+      "auto_next": false,
+      "playback_rate": 1.0,
+      "reversed_playback_rate": 1.0,
+      "notes": "",
+      "dedent_notes": true,
+      "skip_animations": false,
+      "src": null,
+      "type": "video",
+      "direction": "horizontal",
+      "file": "slides/files/MathPresentation/6d0b3595e0ca19264fc7066267d154bf1463e05b202cf86efc217f4b8067acd3.mp4",
+      "rev_file": "slides/files/MathPresentation/6d0b3595e0ca19264fc7066267d154bf1463e05b202cf86efc217f4b8067acd3_reversed.mp4"
+    },
+    {
+      "loop": false,
+      "auto_next": false,
+      "playback_rate": 1.0,
+      "reversed_playback_rate": 1.0,
+      "notes": "",
+      "dedent_notes": true,
+      "skip_animations": false,
+      "src": null,
+      "type": "video",
+      "direction": "horizontal",
+      "file": "slides/files/MathPresentation/64040a7b3ba7d09772771e98c442a779c3d37582b4324712dd5ed259eb81da59.mp4",
+      "rev_file": "slides/files/MathPresentation/64040a7b3ba7d09772771e98c442a779c3d37582b4324712dd5ed259eb81da59_reversed.mp4"
+    }
+  ],
+  "resolution": [
+    1280,
+    720
+  ],
+  "background_color": "black"
+}
