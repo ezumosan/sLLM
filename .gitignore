@@ -1,3 +1,6 @@
 venv/
 .DS_Store
 .idea
+data/raw/*.csv
+data/raw/*.download
+results/simpleqa/
