@@ -1,0 +1,25 @@
+{
+  "upstream_repository": "https://github.com/openai/simple-evals",
+  "upstream_commit": "652c89d0ca9df547706735883097e9537d40dc47",
+  "answer_model": "phi3.5",
+  "grader_model": "qwen3.5:2b",
+  "num_examples": 5,
+  "temperature": 0.1,
+  "seed": 20261013,
+  "num_predict": 128,
+  "elapsed_seconds": 42.68,
+  "score": 0.0,
+  "metrics": {
+    "is_correct": 0.0,
+    "is_correct:std": 0.0,
+    "is_incorrect": 0.0,
+    "is_incorrect:std": 0.0,
+    "is_not_attempted": 1.0,
+    "is_not_attempted:std": 0.0,
+    "score:std": 0.0
+  },
+  "overall_correct_rate": 0.0,
+  "accuracy_given_attempted": 0.0,
+  "simpleqa_f_score": 0.0,
+  "grader_note": "Uses the upstream SimpleQA grader prompt/function; local Ollama grading model differs from the model used in the paper."
+}

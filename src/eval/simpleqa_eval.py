@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import sys
 import time
 from datetime import datetime
@@ -28,12 +29,6 @@ from simple_evals.simpleqa_eval import SimpleQAEval  # noqa: E402
 from simple_evals.types import SamplerBase, SamplerResponse  # noqa: E402
 
 
-ANSWER_SYSTEM_PROMPT = """You are a precise, fact-based QA assistant.
-Answer with only the single core answer in English, enclosed in <ans> and </ans>.
-Do not include explanations or preambles.
-If you do not know the answer with high certainty, reply exactly <ans>I don't know</ans>."""
-
-
 class OllamaSampler(SamplerBase):
     """Adapt Ollama chat completions to the upstream Simple Evals sampler API."""
 
@@ -43,14 +38,16 @@ class OllamaSampler(SamplerBase):
         *,
         temperature: float,
         seed: int,
-        system_prompt: str | None = None,
         num_predict: int = 128,
+        think: bool | None = None,
+        repeat_penalty: float | None = None,
     ) -> None:
         self.model = model
         self.temperature = temperature
         self.seed = seed
-        self.system_prompt = system_prompt
         self.num_predict = num_predict
+        self.think = think
+        self.repeat_penalty = repeat_penalty
 
     @staticmethod
     def _pack_message(content: str, role: str) -> dict[str, str]:
@@ -58,17 +55,24 @@ class OllamaSampler(SamplerBase):
 
     def __call__(self, message_list: list[dict[str, Any]]) -> SamplerResponse:
         messages = list(message_list)
-        if self.system_prompt:
-            messages.insert(0, {"role": "system", "content": self.system_prompt})
+
+        chat_options: dict[str, Any] = {}
+        if self.think is not None:
+            chat_options["think"] = self.think
+
+        options: dict[str, Any] = {
+            "temperature": self.temperature,
+            "seed": self.seed,
+            "num_predict": self.num_predict,
+        }
+        if self.repeat_penalty is not None:
+            options["repeat_penalty"] = self.repeat_penalty
 
         response = ollama.chat(
             model=self.model,
             messages=messages,
-            options={
-                "temperature": self.temperature,
-                "seed": self.seed,
-                "num_predict": self.num_predict,
-            },
+            options=options,
+            **chat_options,
         )
         response_data = response.model_dump() if hasattr(response, "model_dump") else response
         message = response_data["message"]
@@ -92,7 +96,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grader-model", default="qwen2.5:3b", help="Ollama model that applies the upstream grader")
     parser.add_argument("--num-examples", type=int, default=None, help="Run a fixed-size upstream sample; omit for the full dataset")
     parser.add_argument("--temperature", type=float, default=0.1)
-    parser.add_argument("--seed", type=int, default=20261013)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Randomly generated per run unless an explicit seed is provided",
+    )
     parser.add_argument("--num-predict", type=int, default=128)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "results" / "simpleqa")
     args = parser.parse_args()
@@ -103,6 +112,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    seed = args.seed if args.seed is not None else secrets.randbelow(2**31)
+    seed_source = "user" if args.seed is not None else "random"
     args.output_dir = args.output_dir.expanduser().resolve()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -113,15 +124,16 @@ def main() -> int:
     answer_sampler = OllamaSampler(
         args.model,
         temperature=args.temperature,
-        seed=args.seed,
-        system_prompt=ANSWER_SYSTEM_PROMPT,
+        seed=seed,
         num_predict=args.num_predict,
+        repeat_penalty=1.15,
     )
     grader_sampler = OllamaSampler(
         args.grader_model,
         temperature=0.0,
-        seed=args.seed,
+        seed=seed,
         num_predict=16,
+        think=False,
     )
 
     started = time.perf_counter()
@@ -149,10 +161,13 @@ def main() -> int:
         "upstream_commit": "652c89d0ca9df547706735883097e9537d40dc47",
         "answer_model": args.model,
         "grader_model": args.grader_model,
+        "grader_think": False,
         "num_examples": args.num_examples or len(evaluator.examples),
         "temperature": args.temperature,
-        "seed": args.seed,
+        "seed": seed,
+        "seed_source": seed_source,
         "num_predict": args.num_predict,
+        "answer_repeat_penalty": 1.15,
         "elapsed_seconds": round(elapsed, 3),
         "score": float(result.score) if result.score is not None else None,
         "metrics": {key: float(value) for key, value in metrics.items()},
